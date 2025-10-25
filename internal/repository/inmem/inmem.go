@@ -7,31 +7,32 @@ type User struct {
 	Password  string
 	Balance   float64
 	Withdrawn float64
+	OrderNums []string
 }
 
 type Repo struct {
-	Users []User
+	Users map[string]User
 }
 
 func New() *Repo {
 	r := Repo{}
-	r.Users = make([]User, 0, 100)
+	r.Users = make(map[string]User)
 
 	return &r
 }
 
 func (r *Repo) AddUser(login, password string) error {
-	if _, ok := r.getUserByLogin(login); ok {
+	if _, ok := r.Users[login]; ok {
 		return repository.ErrLoginAlreadyTaken
 	}
 
-	r.Users = append(r.Users, User{Login: login, Password: password})
+	r.Users[login] = User{Login: login, Password: password}
 
 	return nil
 }
 
 func (r *Repo) AuthenticateUser(login, password string) error {
-	u, ok := r.getUserByLogin(login)
+	u, ok := r.Users[login]
 	if !ok {
 		return repository.ErrUserLoginNotFound
 	}
@@ -44,20 +45,29 @@ func (r *Repo) AuthenticateUser(login, password string) error {
 }
 
 func (r *Repo) GetBalance(login string) (current, withdrawn float64, err error) {
-	u, ok := r.getUserByLogin(login)
+	u, ok := r.Users[login]
 	if !ok {
 		return 0, 0, repository.ErrUserLoginNotFound
 	}
-
 	return u.Balance, u.Withdrawn, err
 }
 
-func (r *Repo) getUserByLogin(login string) (u User, ok bool) {
-	for _, user := range r.Users {
-		if user.Login == login {
-			return user, true
-		}
+func (r *Repo) GetOrderNums(login string) (orderNums []string, err error) {
+	u, ok := r.Users[login]
+	if !ok {
+		return nil, repository.ErrUserLoginNotFound
+	}
+	return u.OrderNums, nil
+}
+
+func (r *Repo) AddOrderNum(login, orderNum string) error {
+	u, ok := r.Users[login]
+	if !ok {
+		return repository.ErrUserLoginNotFound
 	}
 
-	return User{}, false
+	u.OrderNums = append(u.OrderNums, orderNum)
+	r.Users[u.Login] = u
+
+	return nil
 }
