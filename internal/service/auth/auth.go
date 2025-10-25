@@ -1,8 +1,13 @@
 package auth
 
 import (
+	"errors"
+
 	"github.com/golang-jwt/jwt/v4"
 )
+
+var errInvalidToken = errors.New("invalid token")
+var errUnexpectedSigningMethod = errors.New("unexpected signing method")
 
 type AuthService struct {
 	repo      Repository
@@ -43,4 +48,27 @@ func (a *AuthService) buildJWTString(login string) (jwtString string, err error)
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{UserLogin: login})
 
 	return token.SignedString([]byte(a.secretKey))
+}
+
+func (a *AuthService) GetUserLogin(tokenString string) (login string, err error) {
+	claims := &Claims{}
+	token, err := jwt.ParseWithClaims(
+		tokenString,
+		claims,
+		func(t *jwt.Token) (interface{}, error) {
+			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, errUnexpectedSigningMethod
+			}
+			return []byte(a.secretKey), nil
+		},
+	)
+	if err != nil {
+		return "", err
+	}
+
+	if !token.Valid {
+		return "", errInvalidToken
+	}
+
+	return claims.UserLogin, nil
 }

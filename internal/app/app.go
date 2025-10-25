@@ -5,6 +5,7 @@ import (
 	"gophermart/internal/handler/api/user/balance"
 	"gophermart/internal/handler/api/user/login"
 	"gophermart/internal/handler/api/user/register"
+	"gophermart/internal/middleware/authmw"
 	"gophermart/internal/repository/inmem"
 	"gophermart/internal/service/auth"
 	bm "gophermart/internal/service/balance"
@@ -37,7 +38,11 @@ func Run() error {
 		r.Post("/register", register.New(authService))
 		r.Post("/login", login.New(authService))
 
-		r.Get("/balance", balance.New(balanceManager))
+		r.Group(func(r chi.Router) {
+			r.Use(authmw.AuthMiddleware(authService))
+
+			r.Get("/balance", balance.New(balanceManager))
+		})
 	})
 
 	address := "localhost:8080"

@@ -2,6 +2,7 @@ package balance
 
 import (
 	"encoding/json"
+	"gophermart/internal/middleware/authmw"
 	"gophermart/internal/model"
 	"net/http"
 )
@@ -18,7 +19,7 @@ func New(bg BalanceGetter) http.HandlerFunc {
 		}
 
 		// Получаем логин пользователя
-		userLogin, ok := r.Context().Value("user_login").(string) // TODO: вынести имя переменной контекста в константу (в мидлваре auth)
+		userLogin, ok := r.Context().Value(authmw.UserLoginKey).(string)
 		if !ok {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
