@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"gophermart/internal/handler/api/user/login"
 	"gophermart/internal/handler/api/user/register"
 	"gophermart/internal/repository/inmem"
 	"gophermart/internal/service/auth"
@@ -28,6 +29,7 @@ func Run() error {
 
 	router.Route("/api/user", func(r chi.Router) {
 		r.Post("/register", register.New(authService))
+		r.Post("/login", login.New(authService))
 	})
 
 	address := "localhost:8080"

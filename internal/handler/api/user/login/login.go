@@ -1,18 +1,16 @@
-package register
+package login
 
 import (
 	"encoding/json"
-	"errors"
 	"gophermart/internal/model"
-	"gophermart/internal/repository"
 	"net/http"
 )
 
-type UserCreator interface {
-	CreateUser(login, password string) (jwtToken string, err error)
+type UserAuthenticator interface {
+	AuthenticateUser(login, password string) (jwtToken string, err error)
 }
 
-func New(uc UserCreator) http.HandlerFunc {
+func New(ua UserAuthenticator) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			w.WriteHeader(http.StatusBadRequest)
@@ -33,14 +31,10 @@ func New(uc UserCreator) http.HandlerFunc {
 			return
 		}
 
-		// Регистрируем пользователя
-		jwtToken, err := uc.CreateUser(req.Login, req.Password)
+		// Проверяем пользователя
+		jwtToken, err := ua.AuthenticateUser(req.Login, req.Password)
 		if err != nil {
-			if errors.Is(err, repository.ErrLoginAlreadyTaken) {
-				w.WriteHeader(http.StatusConflict)
-				return
-			}
-			w.WriteHeader(http.StatusInternalServerError)
+			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 		http.SetCookie(w, &http.Cookie{
