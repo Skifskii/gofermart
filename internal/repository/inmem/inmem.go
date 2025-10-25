@@ -3,8 +3,10 @@ package inmem
 import "gophermart/internal/repository"
 
 type User struct {
-	Login    string
-	Password string
+	Login     string
+	Password  string
+	Balance   float64
+	Withdrawn float64
 }
 
 type Repo struct {
@@ -23,7 +25,7 @@ func (r *Repo) AddUser(login, password string) error {
 		return repository.ErrLoginAlreadyTaken
 	}
 
-	r.Users = append(r.Users, User{login, password})
+	r.Users = append(r.Users, User{Login: login, Password: password})
 
 	return nil
 }
@@ -39,6 +41,15 @@ func (r *Repo) AuthenticateUser(login, password string) error {
 	}
 
 	return nil
+}
+
+func (r *Repo) GetBalance(login string) (current, withdrawn float64, err error) {
+	u, ok := r.getUserByLogin(login)
+	if !ok {
+		return 0, 0, repository.ErrUserLoginNotFound
+	}
+
+	return u.Balance, u.Withdrawn, err
 }
 
 func (r *Repo) getUserByLogin(login string) (u User, ok bool) {
