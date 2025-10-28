@@ -9,6 +9,7 @@ import (
 	"gophermart/internal/handler/api/user/register"
 	"gophermart/internal/middleware/authmw"
 	"gophermart/internal/repository/inmem"
+	"gophermart/internal/repository/postgres"
 	"gophermart/internal/service/auth"
 	bm "gophermart/internal/service/balance"
 	om "gophermart/internal/service/orders"
@@ -26,21 +27,20 @@ func Run() error {
 	// TODO:
 
 	// Репозиторий
-	repo := inmem.New()
+	dsn := "postgresql://gouser:gopassword@localhost:5432/gophermartdb?sslmode=disable"
+	repo, _ := postgres.New(dsn)
+	inmemRepo := inmem.New()
 
 	// Сервисы:
 	// - сервис авторизации
 	authService := auth.New(repo, "supersecret") // TODO: вынести секретный ключ в конфиг
 
 	// - сервис управления балансом
-	balanceManager := bm.New(repo)
+	balanceManager := bm.New(inmemRepo)
 
 	// - сервис управления заказами
 	loyaltySystem := loyalsys.New()
-	ordersManager := om.New(repo, loyaltySystem)
-
-	// - система расчёта начислений баллов лояльности
-	// loyaltySystem := loyalty.New(repo) // TODO:
+	ordersManager := om.New(inmemRepo, loyaltySystem)
 
 	// HTTP сервер
 	router := chi.NewRouter()
@@ -53,7 +53,7 @@ func Run() error {
 			r.Use(authmw.AuthMiddleware(authService))
 
 			r.Get("/balance", balance.New(balanceManager))
-			r.Post("/orders", orders.NewPost(ordersManager)) // TODO:
+			r.Post("/orders", orders.NewPost(ordersManager))
 			r.Get("/orders", orders.NewGet(ordersManager))
 		})
 	})
