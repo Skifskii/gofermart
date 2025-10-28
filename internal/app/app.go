@@ -5,12 +5,14 @@ import (
 	"gophermart/internal/handler/api/user/balance"
 	"gophermart/internal/handler/api/user/login"
 	"gophermart/internal/handler/api/user/orders"
+
 	"gophermart/internal/handler/api/user/register"
 	"gophermart/internal/middleware/authmw"
 	"gophermart/internal/repository/inmem"
 	"gophermart/internal/service/auth"
 	bm "gophermart/internal/service/balance"
-	"gophermart/internal/service/loyalty"
+	om "gophermart/internal/service/orders"
+	"gophermart/internal/service/orders/loyalsys"
 	"net/http"
 
 	"github.com/go-chi/chi"
@@ -33,8 +35,12 @@ func Run() error {
 	// - сервис управления балансом
 	balanceManager := bm.New(repo)
 
+	// - сервис управления заказами
+	loyaltySystem := loyalsys.New()
+	ordersManager := om.New(repo, loyaltySystem)
+
 	// - система расчёта начислений баллов лояльности
-	loyaltySystem := loyalty.New(repo)
+	// loyaltySystem := loyalty.New(repo) // TODO:
 
 	// HTTP сервер
 	router := chi.NewRouter()
@@ -47,7 +53,8 @@ func Run() error {
 			r.Use(authmw.AuthMiddleware(authService))
 
 			r.Get("/balance", balance.New(balanceManager))
-			r.Get("/orders", orders.New(loyaltySystem))
+			r.Post("/orders", orders.NewPost(ordersManager)) // TODO:
+			r.Get("/orders", orders.NewGet(ordersManager))
 		})
 	})
 

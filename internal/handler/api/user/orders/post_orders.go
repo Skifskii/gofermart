@@ -3,18 +3,18 @@ package orders
 import (
 	"errors"
 	"gophermart/internal/middleware/authmw"
-	"gophermart/internal/service/loyalty"
+	om "gophermart/internal/service/orders"
 	"io"
 	"net/http"
 )
 
-type OrderUploader interface {
-	UploadOrderNum(userLogin, orderNum string) error
+type OrderAdder interface {
+	AddOrder(userLogin, orderNum string) error
 }
 
-func New(oa OrderUploader) http.HandlerFunc {
+func NewPost(oa OrderAdder) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
+		if r.Method != http.MethodPost {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -36,18 +36,18 @@ func New(oa OrderUploader) http.HandlerFunc {
 		r.Body.Close()
 
 		// Загружаем номер заказа в сервис
-		if err := oa.UploadOrderNum(userLogin, orderNum); err != nil {
-			if errors.Is(err, loyalty.ErrUserUploadedThisOrder) {
+		if err := oa.AddOrder(userLogin, orderNum); err != nil {
+			if errors.Is(err, om.ErrUserUploadedThisOrder) {
 				// 200 - номер заказа уже был загружен этим пользователем
 				w.WriteHeader(http.StatusOK)
 				return
 			}
-			if errors.Is(err, loyalty.ErrWrongOrderNumFormat) {
+			if errors.Is(err, om.ErrWrongOrderNumFormat) {
 				// 422 — неверный формат номера заказа
 				w.WriteHeader(http.StatusUnprocessableEntity)
 				return
 			}
-			if errors.Is(err, loyalty.ErrAnotherUserUploadedThisOrder) {
+			if errors.Is(err, om.ErrAnotherUserUploadedThisOrder) {
 				// 409 - номер заказа уже был загружен другим пользователем
 				w.WriteHeader(http.StatusConflict)
 				return
