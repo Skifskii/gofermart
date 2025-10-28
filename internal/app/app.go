@@ -36,7 +36,7 @@ func Run() error {
 	authService := auth.New(repo, "supersecret") // TODO: вынести секретный ключ в конфиг
 
 	// - сервис управления балансом
-	balanceManager := bm.New(inmemRepo)
+	balanceManager := bm.New(repo)
 
 	// - сервис управления заказами
 	loyaltySystem := loyalsys.New()

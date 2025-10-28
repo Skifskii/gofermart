@@ -98,7 +98,6 @@ func hashPassword(password string) (string, error) {
 
 func (r *Repo) AuthenticateUser(login, password string) error {
 	var hashedPwdFromDB string
-
 	err := r.db.QueryRow(
 		"SELECT password_hash FROM users WHERE login = $1",
 		login,
@@ -116,4 +115,19 @@ func (r *Repo) AuthenticateUser(login, password string) error {
 	}
 
 	return nil
+}
+
+func (r *Repo) GetBalance(login string) (current, withdrawn float64, err error) {
+	err = r.db.QueryRow(
+		"SELECT balance, withdrawn FROM users WHERE login = $1",
+		login,
+	).Scan(&current, &withdrawn)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, 0, repository.ErrUserLoginNotFound
+		}
+		return 0, 0, err
+	}
+
+	return current, withdrawn, err
 }
