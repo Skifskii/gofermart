@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"gophermart/internal/config"
 	"gophermart/internal/handler/api/user/balance"
 	"gophermart/internal/handler/api/user/login"
 	"gophermart/internal/handler/api/user/orders"
@@ -21,19 +22,18 @@ import (
 
 func Run() error {
 	// Конфиг
-	// TODO:
+	cfg := config.New()
 
 	// Логгер
 	// TODO:
 
 	// Репозиторий
-	dsn := "postgresql://gouser:gopassword@localhost:5432/gophermartdb?sslmode=disable"
-	repo, _ := postgres.New(dsn)
+	repo, _ := postgres.New(cfg.DatabaseURI)
 	inmemRepo := inmem.New()
 
 	// Сервисы:
 	// - сервис авторизации
-	authService := auth.New(repo, "supersecret") // TODO: вынести секретный ключ в конфиг
+	authService := auth.New(repo, cfg.SecretKey) // TODO: вынести секретный ключ в конфиг
 
 	// - сервис управления балансом
 	balanceManager := bm.New(repo)
@@ -58,9 +58,8 @@ func Run() error {
 		})
 	})
 
-	address := "localhost:8080"
-	fmt.Printf("Starting server at %s\n", address)
-	http.ListenAndServe(address, router)
+	fmt.Printf("Starting server at %s\n", cfg.RunAddress)
+	http.ListenAndServe(cfg.RunAddress, router)
 
 	return nil
 }
