@@ -3,6 +3,7 @@ package postgres
 import (
 	"database/sql"
 	"errors"
+	"gophermart/internal/model"
 	"gophermart/internal/repository"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -130,4 +131,52 @@ func (r *Repo) GetBalance(login string) (current, withdrawn float64, err error) 
 	}
 
 	return current, withdrawn, err
+}
+
+func (r *Repo) GetOrders(login string) ([]model.Order, error) {
+	// Получаем заказы пользователя
+	rows, err := r.db.Query(
+		"SELECT number, status, accrual, uploaded_at FROM orders WHERE user_login = $1;",
+		login,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, repository.ErrUserLoginNotFound
+		}
+		return nil, err
+	}
+	defer rows.Close()
+
+	var orders []model.Order
+	for rows.Next() {
+		var ord model.Order
+		err := rows.Scan(&ord.Number, &ord.Status, &ord.Accrual, &ord.UploadedAt)
+		if err != nil {
+			return nil, err
+		}
+		orders = append(orders, ord)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return orders, nil
+}
+
+func (r *Repo) AddOrder(login string, order model.Order) error {
+	_, err := r.db.Exec(
+		"INSERT INTO orders (number, status, accrual, uploaded_at, user_login) VALUES ($1, $2, $3, $4, $5)",
+		order.Number, order.Status, order.Accrual, order.UploadedAt,
+		login,
+	)
+
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return repository.ErrOrderAlreadyExists
+		}
+	}
+
+	return err
 }

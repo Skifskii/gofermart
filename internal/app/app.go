@@ -9,7 +9,6 @@ import (
 
 	"gophermart/internal/handler/api/user/register"
 	"gophermart/internal/middleware/authmw"
-	"gophermart/internal/repository/inmem"
 	"gophermart/internal/repository/postgres"
 	"gophermart/internal/service/auth"
 	bm "gophermart/internal/service/balance"
@@ -29,18 +28,17 @@ func Run() error {
 
 	// Репозиторий
 	repo, _ := postgres.New(cfg.DatabaseURI)
-	inmemRepo := inmem.New()
 
 	// Сервисы:
 	// - сервис авторизации
-	authService := auth.New(repo, cfg.SecretKey) // TODO: вынести секретный ключ в конфиг
+	authService := auth.New(repo, cfg.SecretKey)
 
 	// - сервис управления балансом
 	balanceManager := bm.New(repo)
 
 	// - сервис управления заказами
 	loyaltySystem := loyalsys.New()
-	ordersManager := om.New(inmemRepo, loyaltySystem)
+	ordersManager := om.New(repo, loyaltySystem)
 
 	// HTTP сервер
 	router := chi.NewRouter()
