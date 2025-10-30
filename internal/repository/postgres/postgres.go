@@ -180,3 +180,17 @@ func (r *Repo) AddOrder(login string, order model.Order) error {
 
 	return err
 }
+
+func (r *Repo) GetOrder(orderNum string) (ord model.Order, err error) {
+	err = r.db.QueryRow(
+		"SELECT number, status, accrual, uploaded_at, user_login FROM orders WHERE number = $1",
+		orderNum,
+	).Scan(ord.Number, ord.Status, ord.Accrual, ord.UploadedAt, ord.UserLogin)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ord, repository.ErrOrderNotFound
+		}
+	}
+
+	return ord, err
+}

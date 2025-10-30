@@ -3,8 +3,8 @@ package orders
 import (
 	"errors"
 	"gophermart/internal/model"
+	"gophermart/internal/repository"
 	"sort"
-	"time"
 )
 
 var ErrWrongOrderNumFormat = errors.New("wrong order number format")
@@ -19,6 +19,7 @@ type OrdersManager struct {
 type Repository interface {
 	GetOrders(userLogin string) ([]model.Order, error)
 	AddOrder(login string, order model.Order) error
+	GetOrder(orderNum string) (model.Order, error)
 }
 
 type OrderInfoGetter interface {
@@ -51,14 +52,18 @@ func (om *OrdersManager) AddOrder(userLogin, orderNum string) error {
 		return ErrWrongOrderNumFormat
 	}
 
-	// Проверяем, не загружал ли пользователь этот заказ ранее
-	userOrders, err := om.GetOrders(userLogin)
-	if err != nil {
-		return err
-	}
-	for _, order := range userOrders {
-		if order.Number == orderNum {
+	// Ищем заказ среди сохраненных
+	ord, err := om.repo.GetOrder(orderNum)
+	if err == nil {
+		// Если ошибок нет, значит заказ уже загружен в систему
+		if ord.UserLogin == userLogin {
 			return ErrUserUploadedThisOrder
+		}
+		return ErrAnotherUserUploadedThisOrder
+	} else {
+		// Ошибку отсутствия заказа пропускаем, остальные возвращаем
+		if !errors.Is(err, repository.ErrOrderNotFound) {
+			return err
 		}
 	}
 
@@ -68,15 +73,7 @@ func (om *OrdersManager) AddOrder(userLogin, orderNum string) error {
 		return err
 	}
 
-	// Если заказ новый, записываем его в заказы пользователя
-	if order.Status == model.StatusRegistered {
-		order.UploadedAt = time.Now()
-		return om.repo.AddOrder(userLogin, order)
-	}
-
-	// Если заказ не в начальном статусе, значит его уже загружал ДРУГОЙ пользователь.
-	// Сценарий загрузки ЭТИМ пользователем уже проверили ранее
-	return ErrAnotherUserUploadedThisOrder
+	return om.repo.AddOrder(userLogin, order)
 }
 
 func validateOrderNumFormat(orderNum string) bool {

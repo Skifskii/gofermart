@@ -26,4 +26,5 @@ type Order struct {
 	Status     Status
 	Accrual    *float64
 	UploadedAt time.Time
+	UserLogin  string
 }
